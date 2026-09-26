@@ -1,5 +1,7 @@
 # 🧠 Vortrainiertes Netz – Wissen aus vielen Depots für ein neues
 
+**[→ Demo live ausprobieren](https://sebastianhanisch-pretrained-net-demo.streamlit.app/)**
+
 Elftes und **letztes Stück** der **Zeitreihen-Prognose-Linie** der "Konzepte"-Reihe im Portfolio von [Sebastian Hanisch](https://sebastianhanisch.net) – Operations Research und Machine Learning. Die **Vortraining-Kante** von Stück 6 ([Boosting mit Lag-Merkmalen](https://github.com/sebastian-hanisch/boosting-forecast-demo), ein Modell für alle Depots) und eine Kante in die [Kombination](https://github.com/sebastian-hanisch/forecast-combination-demo) (Stück 9). Es ist das **einzige neuronale Netz** der Linie – in numpy von Hand gerechnet, ohne Framework.
 
 Ein **neues Depot** hat kaum Historie, und mit ihr lässt sich kein Prognoseverfahren ordentlich schätzen. Die Idee der Foundation-Modelle für Zeitreihen: **einmal auf vielen anderen Reihen vortrainieren** und dann anwenden – ohne eigenes Lernen (**Zero-Shot**) oder nach kurzem **Feintuning**. Die Demo baut ein kleines Netz im Stil von **N-BEATS** (Blöcke mit Rückblick und Vorausschau, Residuen dazwischen), trainiert es auf einem **Pool** erzeugter Depots und prüft es auf **neuen Depots** mit 98 bis 730 Tagen Historie – neben dem Netz, das nur aus der eigenen Historie lernt, dem vortrainierten Boosting aus Stück 6 und den lokalen Verfahren der Vorgänger. Alle Daten sind erzeugt.
