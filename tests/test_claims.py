@@ -188,3 +188,20 @@ def test_self_check_picks_by_weekday_pattern():
     base = E.Settings(n_new=C.EXP_NEW)
     picked = {sh: sum(int(E.analyse(E._replace(base, seed=sd, shift=sh)).picked.sum()) for sd in C.EXP_SEEDS) for sh in (0.0, 1.0)}
     assert picked[1.0] == 0 and picked[0.0] >= 29                                                       # 30 Depots: bei passendem Muster (fast) alle, beim Wochenend-Depot keins
+
+
+def test_chronos_measurement_numbers_in_the_readme_match_the_stored_result():
+    """Die Einmalmessung mit Chronos-tiny läuft nicht in der Suite (Torch); geprüft wird, dass README und gespeichertes Ergebnis übereinstimmen und die Kernaussagen aus den Zahlen folgen."""
+    import json
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    res = json.loads((root / "tools" / "chronos_tiny_ergebnis.json").read_text(encoding="utf-8"))
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    fmt = lambda v: f"{v:.3f}".replace(".", ",")
+    for v in list(res["chronos"].values()) + [x for d in res["demo"].values() for x in d.values()]:
+        assert fmt(v) in readme, v
+    ch, demo = res["chronos"], res["demo"]
+    assert res["origins"] == 51 and ch["amazon/chronos-t5-tiny|512|0.0"] > demo["0.0"]["wm"] and ch["amazon/chronos-t5-tiny|56|0.0"] > demo["0.0"]["wm"] and min(v for k, v in ch.items() if "bolt" in k) > 1.2
+    assert ch["amazon/chronos-t5-tiny|56|0.0"] > demo["0.0"]["zero"] + 0.1 and ch["amazon/chronos-t5-tiny|56|0.0"] > demo["0.0"]["gbm"] + 0.1
+    assert max(ch["amazon/chronos-t5-tiny|56|1.0"], ch["amazon/chronos-t5-tiny|512|1.0"]) < demo["1.0"]["zero"] - 0.5 and demo["1.0"]["gbm"] > 2 * ch["amazon/chronos-t5-tiny|512|1.0"]
+    assert ch["amazon/chronos-t5-tiny|512|1.0"] > demo["1.0"]["wm"] and demo["1.0"]["auto"] == demo["1.0"]["wm"]

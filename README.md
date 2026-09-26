@@ -43,9 +43,28 @@ Mehr-Seed-Zahlen: Mittel über Seeds 0 bis 2 mit je 10 neuen Depots und Standard
 
 **Standardfall (Seed 3, 10 neue Depots, 182 Tage):** Wochenmittel 0,919, Holt-Winters 0,935, Netz allein 1,152, Zero-Shot **0,808**, Feintuning 0,839, Boosting 0,777, Mittel aus Netz und Boosting 0,771, Orakel 0,690. Weitere Voreinstellungen mit Zahlen: siehe die Hilfetexte der sechs Schnellstart-Knöpfe (alle in `tests/test_claims.py` nachgerechnet).
 
+## Einmalmessung mit einem echten Modell (Chronos-tiny)
+
+Kein Teil der App und der Tests (Torch, Gewichte-Download), sondern ein **einmaliger Lauf** von `tools/chronos_tiny.py` in einer frischen Umgebung (Docker, `python:3.12`, Torch für die CPU, `chronos-forecasting`); das Ergebnis steht in `tools/chronos_tiny_ergebnis.json`. Protokoll wie die Demo: Seeds 0 bis 2, je 10 neue Depots, Horizont 14 Tage, aber nur **jeder siebte Ursprung** des Testjahres (51 je Depot, jeder Wochentag gleich oft); die Verfahren der Demo sind auf denselben Ursprüngen neu ausgewertet (Historie 182 Tage, Feintuning 100 Schritte). Chronos sieht nur die letzten 56 Tage (wie das Netz) oder 512 Tage der Reihe, **weder Kalender noch Aktionsplan**; Prognose = Median.
+
+| MASE | Wochenmuster wie im Pool | Wochenend-Depot |
+|---|---|---|
+| Wochenmittel | 0,936 | 0,938 |
+| Holt-Winters (182 Tage) | 0,912 | 1,024 |
+| Netz, Zero-Shot | 0,834 | 1,639 |
+| Netz mit Feintuning (100 Schritte) | 0,836 | 1,177 |
+| Netz mit Selbstprüfung | 0,834 | 0,938 |
+| Boosting (Stück 6), Zero-Shot | 0,798 | 2,877 |
+| **Chronos-T5-tiny**, Kontext 56 Tage | 1,014 | 1,062 |
+| **Chronos-T5-tiny**, Kontext 512 Tage | 0,968 | 1,070 |
+| Chronos-Bolt-tiny, Kontext 56 Tage | 1,543 | 1,415 |
+| Chronos-Bolt-tiny, Kontext 512 Tage | 1,388 | 1,292 |
+
+**Befund:** Das echte vortrainierte Modell ist auf diesen Daten **schlechter als das Wochenmittel** (T5-tiny 0,968 bis 1,014 gegen 0,936; Bolt-tiny deutlich schlechter) und weit hinter dem kleinen Netz (0,834) und dem Boosting (0,798). Dafür **bricht es beim Wochenend-Depot nicht ein** (1,062 und 1,070 statt 1,639 beim Netz und 2,877 beim Boosting) – ohne das Wochenmittel (0,938) zu schlagen. Es ist robust, aber auf dieser Aufgabe ohne Nutzen. Vermutete Gründe (nicht isoliert): es kennt weder Feiertage (zwei in 14 Tagen an Ursprung 813) noch Aktionsplan, die das Netz und das Boosting als Eingabe bekommen; und es ist mit 8 Millionen Parametern (T5-tiny) das kleinste der T5-Familie. Chronos-T5 zieht Stichproben: ein erster Lauf ergab 1,008 und 0,964 (Kontext 56 und 512, Wochenmuster wie im Pool), die Wiederholung 1,014 und 0,968. Eine Aussage über größere Modelle (größere Chronos-Modelle, TimesFM, Moirai) ist das nicht.
+
 ## Ehrliche Grenzen
 
-- **Erzeugte Daten mit einer Musterfamilie.** Das Netz lernt genau die Muster, die das Vehikel erzeugt (Wochen- und Jahresmuster, Feiertage, Aktionen); echte Portfolios sind unordentlicher. Echte Foundation-Modelle haben Millionen bis Milliarden Parameter und sehen viele Musterfamilien – hier bewusst **nicht** gerechnet (kein Torch, keine Gewichte zum Herunterladen, keine CI-Fragilität). Eine einmalige lokale Messung mit einem echten Modell bleibt ein offener Punkt am Ende der Linie.
+- **Erzeugte Daten mit einer Musterfamilie.** Das Netz lernt genau die Muster, die das Vehikel erzeugt (Wochen- und Jahresmuster, Feiertage, Aktionen); echte Portfolios sind unordentlicher. Echte Foundation-Modelle haben Millionen bis Milliarden Parameter und sehen viele Musterfamilien – in der App und den Tests bewusst **nicht** gerechnet (kein Torch, keine Gewichte zum Herunterladen, keine CI-Fragilität); eine einmalige Messung mit Chronos-tiny steht oben.
 - **Pool und neue Depots teilen Kalender und Zeitraum.** In echten Portfolios trainiert man auf der Vergangenheit anderer Depots und prüft danach; hier liegen alle Zieltage des Vortrainings vor dem Testjahr, die neuen Depots bringen nur Historie vor dem Testjahr mit.
 - **Die Standardgröße (2 Blöcke, Breite 32, 12 Epochen) wurde nach diesen Messungen gewählt.** Die Auswahl fiel auf denselben Seeds wie der Test (Unterschiede höchstens 1 %); die **Lernrate des Feintunings** (0,0001) und die Schrittzahlen wurden dagegen auf getrennten Seeds (100 bis 102) bestimmt. Größere Netze wurden nicht besser.
 - **Feintuning ist einfach gehalten:** alle Gewichte, feste Lernrate, feste Schrittzahl, kein frühes Stoppen. Ein Validierungsstück in der eigenen Historie könnte die Schrittzahl wählen – bei 98 Tagen (29 Fenster) bleibt dafür kaum etwas übrig.
@@ -65,7 +84,7 @@ Der freigegebene Linien-Plan sah für Stück 11 vor: Vortraining → **Zero-Shot
 
 ## Tests
 
-`tests/` prüft das Netz (Vorwärtsrechnung von Hand, alle Ableitungen gegen Differenzenquotienten für L1 und L2 und mehrere Blockzahlen, erster Adam-Schritt von Hand, Lernen einer linearen Abbildung, Momentaufnahmen), die Zeilen und Normierung (von Hand, Größenunabhängigkeit, Grenzen von Vortraining, Historie und Testjahr, keine Zukunft im Fenster), die Auswertung (Kennzahlen von Hand, Zeitgrenzen: das Vortraining hängt nicht von Tagen des Testjahres ab, das Feintuning nur von der Historie, Prognosen eines Ursprungs nicht von späteren Tagen; Selbstprüfung von Hand), die Presets und Permalinks, die App (AppTest: Standard, jedes Preset, Regler, Momentaufnahmen, Permalink-Klemmen und -Einrasten, Extremwerte, vier Experimente auf Abruf) und **jede Zahl dieses READMEs** (`test_claims.py`, Mehr-Seed-Zahlen mit Bändern, Einzelzahlen mit großzügigen Bändern und Strukturgrenzen). 71 Tests, Laufzeit etwa acht Minuten; die CI läuft bei jedem Push und **wöchentlich** (die Abhängigkeiten sind nicht gepinnt).
+`tests/` prüft das Netz (Vorwärtsrechnung von Hand, alle Ableitungen gegen Differenzenquotienten für L1 und L2 und mehrere Blockzahlen, erster Adam-Schritt von Hand, Lernen einer linearen Abbildung, Momentaufnahmen), die Zeilen und Normierung (von Hand, Größenunabhängigkeit, Grenzen von Vortraining, Historie und Testjahr, keine Zukunft im Fenster), die Auswertung (Kennzahlen von Hand, Zeitgrenzen: das Vortraining hängt nicht von Tagen des Testjahres ab, das Feintuning nur von der Historie, Prognosen eines Ursprungs nicht von späteren Tagen; Selbstprüfung von Hand), die Presets und Permalinks, die App (AppTest: Standard, jedes Preset, Regler, Momentaufnahmen, Permalink-Klemmen und -Einrasten, Extremwerte, vier Experimente auf Abruf) und **jede Zahl dieses READMEs** (`test_claims.py`, Mehr-Seed-Zahlen mit Bändern, Einzelzahlen mit großzügigen Bändern und Strukturgrenzen). 72 Tests, Laufzeit etwa acht Minuten; die CI läuft bei jedem Push und **wöchentlich** (die Abhängigkeiten sind nicht gepinnt).
 
 ## Dateistruktur
 
@@ -85,7 +104,7 @@ Der freigegebene Linien-Plan sah für Stück 11 vor: Vortraining → **Zero-Shot
 
 ## Bewusst nicht umgesetzt
 
-- **Echte Foundation-Modelle** (Chronos, TimesFM, Moirai, TimeGPT): Torch und Gewichte zum Herunterladen, CI-Fragilität, ein API-Schlüssel. Eine einmalige lokale Messung mit einem kleinen echten Modell bleibt ein offener Punkt am Ende der Linie.
+- **Echte Foundation-Modelle in der App und den Tests** (Chronos, TimesFM, Moirai, TimeGPT): Torch und Gewichte zum Herunterladen, CI-Fragilität, ein API-Schlüssel. Nur Chronos-tiny (T5 und Bolt) wurde einmal gemessen (siehe oben); größere Modelle nicht.
 - **Vortrainierte Gewichte als Datei.** Das Vortraining läuft in wenigen Sekunden beim ersten Aufruf; die Demo liefert keine Gewichte aus.
 - **Mehrere Musterfamilien im Pool, Domänenanpassung, Adapter/LoRA statt vollem Feintuning, frühes Stoppen im Feintuning.**
 - **Prognoseintervalle aus dem Netz** (Stück 7 zeigt, wie man sie aus jedem Verfahren gewinnt).
