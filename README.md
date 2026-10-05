@@ -22,7 +22,7 @@ Ein **neues Depot** hat kaum Historie, und mit ihr lässt sich kein Prognoseverf
 
 ## Methodik
 
-Verglichen werden auf den neuen Depots: **Wochenmittel** (Stück 1) und **Holt-Winters** (Stück 2) mit der eigenen Historie, das **Netz allein**, das **vortrainierte Netz** (Zero-Shot, mit Feintuning, mit Selbstprüfung), das **vortrainierte Boosting** aus Stück 6 (dasselbe Pool-Training, Lag-, Kalender- und Aktionsmerkmale, Zero-Shot) und das **Mittel aus Netz und Boosting** (Stück 9). Als Untergrenze der **Orakel** (wahrer Erwartungswert). Die Gewichte des Vortrainings sehen nur Tage vor dem Testjahr; die Gewichte eines neuen Depots nur seine Historie vor dem Testjahr.
+Verglichen werden auf den neuen Depots: **Wochenmittel** (Stück 1) und **Holt-Winters** (Stück 2) mit der eigenen Historie, das **Netz allein**, das **vortrainierte Netz** (Zero-Shot, mit Feintuning, mit Selbstprüfung), das **vortrainierte Boosting** aus Stück 6 (dasselbe Pool-Training, Lag-, Kalender- und Aktionsmerkmale, Zero-Shot) und das **Mittel aus Netz und Boosting** (Stück 9). Als Untergrenze für Erwartungswert-Schätzer der **Orakel** (wahrer Erwartungswert; für die MAE wäre streng genommen der Median der log-normalen Reihe minimal besser, bei Rauschen 0,14 um etwa 0,2 %). Die Gewichte des Vortrainings sehen nur Tage vor dem Testjahr; die Gewichte eines neuen Depots nur seine Historie vor dem Testjahr.
 
 ## Befunde (gemessen, keine Behauptungen)
 
